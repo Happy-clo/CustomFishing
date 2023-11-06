@@ -11,7 +11,7 @@ metrics: true
 # Check updates
 update-checker: true
 
-# Available locales: english
+# Available locales: english / chinese / french / hungarian
 lang: english
 
 # Mechanic settings
@@ -125,6 +125,8 @@ mechanics:
   competition:
     # Use redis for cross server data synchronization
     redis-ranking: false
+    # Server group
+    server-group: default
     # Increase this value would allow you to use more placeholders like {4_player} {5_score} in sacrifice of some performance
     placeholder-limit: 3
 

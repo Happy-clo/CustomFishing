@@ -25,7 +25,6 @@ import net.momirealms.customfishing.compatibility.papi.PlaceholderManagerImpl;
 import net.momirealms.customfishing.mechanic.misc.value.ExpressionValue;
 import net.momirealms.customfishing.mechanic.misc.value.PlainValue;
 import net.momirealms.customfishing.mechanic.misc.value.Value;
-import net.objecthunter.exp4j.Expression;
 import net.objecthunter.exp4j.ExpressionBuilder;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -285,25 +284,15 @@ public class ConfigUtils {
             }
             case '=' -> {
                 String formula = text.substring(1);
-                return (player, weight) -> getExpressionValue(player, formula, Map.of("0", weight));
+                return (player, weight) -> getExpressionValue(player, formula, Map.of("{0}", String.valueOf(weight)));
             }
             default -> throw new IllegalArgumentException("Invalid weight: " + text);
         }
     }
 
-    public static double getExpressionValue(Player player, String formula, Map<String, Double> vars) {
-        boolean hasPapi = PlaceholderManagerImpl.getInstance().hasPapi();
-        if (hasPapi)
-            formula = PlaceholderManagerImpl.getInstance().parseCacheablePlaceholders(player, formula);
-        ExpressionBuilder expressionBuilder = new ExpressionBuilder(formula);
-        for (Map.Entry<String, Double> entry : vars.entrySet()) {
-            expressionBuilder.variables(entry.getKey());
-        }
-        Expression expression = expressionBuilder.build();
-        for (Map.Entry<String, Double> entry : vars.entrySet()) {
-            expression.setVariable(entry.getKey(), entry.getValue());
-        }
-        return expression.evaluate();
+    public static double getExpressionValue(Player player, String formula, Map<String, String> vars) {
+        formula = PlaceholderManagerImpl.getInstance().parse(player, formula, vars);
+        return new ExpressionBuilder(formula).build().evaluate();
     }
 
     public static ArrayList<String> getReadableSection(Map<String, Object> map) {

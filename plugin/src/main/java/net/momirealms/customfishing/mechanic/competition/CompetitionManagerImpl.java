@@ -32,7 +32,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -210,7 +209,7 @@ public class CompetitionManagerImpl implements CompetitionManager {
         this.nextCompetitionSeconds = nextCompetitionTime;
         CompetitionConfig config = timeConfigMap.get(competitionSchedule);
         if (config != null) {
-            startCompetition(config, false, false);
+            startCompetition(config, false, null);
         }
     }
 
@@ -240,22 +239,14 @@ public class CompetitionManagerImpl implements CompetitionManager {
         return "";
     }
 
-    /**
-     * Starts a competition with the specified name, allowing for the option to force start it or apply it to the entire server.
-     *
-     * @param competition The name of the competition to start.
-     * @param force       Whether to force start the competition even if amount of the online players is lower than the requirement
-     * @param allServer   Whether to apply the competition to the servers that connected to Redis.
-     * @return {@code true} if the competition was started successfully, {@code false} otherwise.
-     */
     @Override
-    public boolean startCompetition(String competition, boolean force, boolean allServer) {
+    public boolean startCompetition(String competition, boolean force, String serverGroup) {
         CompetitionConfig config = commandConfigMap.get(competition);
         if (config == null) {
             LogUtils.warn("Competition " + competition + " doesn't exist.");
             return false;
         }
-        return startCompetition(config, force, allServer);
+        return startCompetition(config, force, serverGroup);
     }
 
     /**
@@ -270,16 +261,8 @@ public class CompetitionManagerImpl implements CompetitionManager {
         return currentCompetition.isOnGoing() ? currentCompetition : null;
     }
 
-    /**
-     * Starts a competition using the specified configuration.
-     *
-     * @param config    The configuration of the competition to start.
-     * @param force     Whether to force the start of the competition.
-     * @param allServer Whether the competition should start across all servers in the network.
-     * @return True if the competition was started successfully, false otherwise.
-     */
     @Override
-    public boolean startCompetition(CompetitionConfig config, boolean force, boolean allServer) {
+    public boolean startCompetition(CompetitionConfig config, boolean force, @Nullable String serverGroup) {
         if (!force) {
             int players = Bukkit.getOnlinePlayers().size();
             if (players < config.getMinPlayersToStart()) {
@@ -294,11 +277,11 @@ public class CompetitionManagerImpl implements CompetitionManager {
             }
             start(config);
             return true;
-        } else if (!allServer) {
+        } else if (serverGroup == null) {
             start(config);
             return true;
         } else {
-            RedisManager.getInstance().sendRedisMessage("cf_competition", "start;" + config.getKey());
+            RedisManager.getInstance().publishRedisMessage(serverGroup, "start;" + config.getKey());
             return true;
         }
     }
