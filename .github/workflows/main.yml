@@ -30,4 +30,13 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
          name: CustomFishing
-         path: /home/runner/work/CustomFishing
+         path: target/*.jar
+      - name: automatic releases
+        uses: marvinpinto/action-automatic-releases@v1.2.1
+        with:
+         repo_token: "${{ secrets.GITHUB_TOKEN }}"
+         automatic_release_tag: "latest"
+         prerelease: false
+         title: "CustomFishing 自动构建最新版本"
+         files: |
+              target/*.jar
