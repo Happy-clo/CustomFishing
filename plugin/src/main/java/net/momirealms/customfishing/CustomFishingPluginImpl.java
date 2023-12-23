@@ -120,29 +120,29 @@ public class CustomFishingPluginImpl extends CustomFishingPlugin {
 
     @Override
     public void onDisable() {
-        ((AdventureManagerImpl) this.adventure).close();
-        ((BagManagerImpl) this.bagManager).disable();
-        ((BlockManagerImpl) this.blockManager).disable();
-        ((EffectManagerImpl) this.effectManager).disable();
-        ((FishingManagerImpl) this.fishingManager).disable();
-        ((GameManagerImpl) this.gameManager).disable();
-        ((ItemManagerImpl) this.itemManager).disable();
-        ((LootManagerImpl) this.lootManager).disable();
-        ((MarketManagerImpl) this.marketManager).disable();
-        ((EntityManagerImpl) this.entityManager).disable();
-        ((RequirementManagerImpl) this.requirementManager).disable();
-        ((SchedulerImpl) this.scheduler).shutdown();
-        ((IntegrationManagerImpl) this.integrationManager).disable();
-        ((CompetitionManagerImpl) this.competitionManager).disable();
-        ((StorageManagerImpl) this.storageManager).disable();
-        ((PlaceholderManagerImpl) this.placeholderManager).disable();
-        ((StatisticsManagerImpl) this.statisticsManager).disable();
-        ((ActionManagerImpl) this.actionManager).disable();
-        ((TotemManagerImpl) this.totemManager).disable();
-        ((HookManagerImpl) this.hookManager).disable();
-        this.coolDownManager.disable();
-        this.chatCatcherManager.disable();
-        this.commandManager.unload();
+        if (this.adventure != null) ((AdventureManagerImpl) this.adventure).close();
+        if (this.bagManager != null) ((BagManagerImpl) this.bagManager).disable();
+        if (this.blockManager != null) ((BlockManagerImpl) this.blockManager).disable();
+        if (this.effectManager != null) ((EffectManagerImpl) this.effectManager).disable();
+        if (this.fishingManager != null) ((FishingManagerImpl) this.fishingManager).disable();
+        if (this.gameManager != null) ((GameManagerImpl) this.gameManager).disable();
+        if (this.itemManager != null) ((ItemManagerImpl) this.itemManager).disable();
+        if (this.lootManager != null) ((LootManagerImpl) this.lootManager).disable();
+        if (this.marketManager != null) ((MarketManagerImpl) this.marketManager).disable();
+        if (this.entityManager != null) ((EntityManagerImpl) this.entityManager).disable();
+        if (this.requirementManager != null) ((RequirementManagerImpl) this.requirementManager).disable();
+        if (this.scheduler != null) ((SchedulerImpl) this.scheduler).shutdown();
+        if (this.integrationManager != null) ((IntegrationManagerImpl) this.integrationManager).disable();
+        if (this.competitionManager != null) ((CompetitionManagerImpl) this.competitionManager).disable();
+        if (this.storageManager != null) ((StorageManagerImpl) this.storageManager).disable();
+        if (this.placeholderManager != null) ((PlaceholderManagerImpl) this.placeholderManager).disable();
+        if (this.statisticsManager != null) ((StatisticsManagerImpl) this.statisticsManager).disable();
+        if (this.actionManager != null) ((ActionManagerImpl) this.actionManager).disable();
+        if (this.totemManager != null) ((TotemManagerImpl) this.totemManager).disable();
+        if (this.hookManager != null) ((HookManagerImpl) this.hookManager).disable();
+        if (this.coolDownManager != null) this.coolDownManager.disable();
+        if (this.chatCatcherManager != null) this.chatCatcherManager.disable();
+        if (this.commandManager != null) this.commandManager.unload();
         HandlerList.unregisterAll(this);
     }
 
@@ -206,30 +206,39 @@ public class CustomFishingPluginImpl extends CustomFishingPlugin {
                 "https://maven.aliyun.com/repository/public/" : "https://repo.maven.apache.org/maven2/";
         LibraryLoader.loadDependencies(
                 "org.apache.commons:commons-pool2:2.12.0", mavenRepo,
-                "redis.clients:jedis:5.0.1", mavenRepo,
+                "redis.clients:jedis:5.1.0", mavenRepo,
                 "dev.dejvokep:boosted-yaml:1.3.1", mavenRepo,
                 "com.zaxxer:HikariCP:5.0.1", mavenRepo,
                 "net.objecthunter:exp4j:0.4.8", mavenRepo,
-                "org.mariadb.jdbc:mariadb-java-client:3.2.0", mavenRepo,
+                "org.mariadb.jdbc:mariadb-java-client:3.3.0", mavenRepo,
                 "com.mysql:mysql-connector-j:8.0.33", mavenRepo,
                 "commons-io:commons-io:2.14.0", mavenRepo,
                 "com.google.code.gson:gson:2.10.1", mavenRepo,
                 "com.h2database:h2:2.2.224", mavenRepo,
-                "org.mongodb:mongodb-driver-sync:4.10.2", mavenRepo,
-                "org.mongodb:mongodb-driver-core:4.10.2", mavenRepo,
-                "org.mongodb:bson:4.10.2", mavenRepo,
-                "org.xerial:sqlite-jdbc:3.43.0.0", mavenRepo,
-                "dev.jorel:commandapi-bukkit-shade:9.2.0", mavenRepo,
-                "xyz.xenondevs.invui:invui-core:1.19", "https://repo.xenondevs.xyz/releases/",
-                "xyz.xenondevs.invui:inventory-access:1.19", "https://repo.xenondevs.xyz/releases/",
-                "xyz.xenondevs.invui:inventory-access-r8:1.19", "https://repo.xenondevs.xyz/releases/",
-                "xyz.xenondevs.invui:inventory-access-r9:1.19", "https://repo.xenondevs.xyz/releases/",
-                "xyz.xenondevs.invui:inventory-access-r10:1.19", "https://repo.xenondevs.xyz/releases/",
-                "xyz.xenondevs.invui:inventory-access-r11:1.19", "https://repo.xenondevs.xyz/releases/",
-                "xyz.xenondevs.invui:inventory-access-r12:1.19", "https://repo.xenondevs.xyz/releases/",
-                "xyz.xenondevs.invui:inventory-access-r13:1.19", "https://repo.xenondevs.xyz/releases/",
-                "xyz.xenondevs.invui:inventory-access-r14:1.19", "https://repo.xenondevs.xyz/releases/",
-                "xyz.xenondevs.invui:inventory-access-r15:1.19", "https://repo.xenondevs.xyz/releases/"
+                "org.mongodb:mongodb-driver-sync:4.11.1", mavenRepo,
+                "org.mongodb:mongodb-driver-core:4.11.1", mavenRepo,
+                "org.mongodb:bson:4.11.1", mavenRepo,
+                "org.xerial:sqlite-jdbc:3.43.2.2", mavenRepo,
+                "dev.jorel:commandapi-bukkit-shade:9.3.0", mavenRepo
+        );
+
+        String version = getServer().getClass().getPackage().getName().split("\\.")[3];
+        String artifact = "";
+        switch (version) {
+            case "v1_17_R1" -> artifact = "r9";
+            case "v1_18_R1" -> artifact = "r10";
+            case "v1_18_R2" -> artifact = "r11";
+            case "v1_19_R1" -> artifact = "r12";
+            case "v1_19_R2" -> artifact = "r13";
+            case "v1_19_R3" -> artifact = "r15";
+            case "v1_20_R1" -> artifact = "r16";
+            case "v1_20_R2" -> artifact = "r17";
+            case "v1_20_R3" -> artifact = "r18";
+        }
+        LibraryLoader.loadDependencies(
+                "xyz.xenondevs.invui:invui-core:1.24", "https://repo.xenondevs.xyz/releases/",
+                "xyz.xenondevs.invui:inventory-access:1.24", "https://repo.xenondevs.xyz/releases/",
+                String.format("xyz.xenondevs.invui:inventory-access-%s:1.24", artifact), "https://repo.xenondevs.xyz/releases/"
         );
     }
 

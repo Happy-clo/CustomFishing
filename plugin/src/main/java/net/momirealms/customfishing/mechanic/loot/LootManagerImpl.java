@@ -175,7 +175,6 @@ public class LootManagerImpl implements LootManager {
     @Override
     public Map<String, Double> getPossibleLootKeysWithWeight(Effect initialEffect, Condition condition) {
         Map<String, Double> lootWithWeight = ((RequirementManagerImpl) plugin.getRequirementManager()).getLootWithWeight(condition);
-
         Player player = condition.getPlayer();
         for (Pair<String, WeightModifier> pair : initialEffect.getWeightModifier()) {
             Double previous = lootWithWeight.get(pair.left());
@@ -241,6 +240,14 @@ public class LootManagerImpl implements LootManager {
                         List<String> groupMembers = lootGroupMap.computeIfAbsent(g, k -> new ArrayList<>());
                         groupMembers.add(loot.getID());
                     }
+                }
+                // legacy format support
+                if (section.contains("requirements") && section.contains("weight")) {
+                    plugin.getRequirementManager().putLegacyLootToMap(
+                            loot.getID(),
+                            plugin.getRequirementManager().getRequirements(section.getConfigurationSection("requirements"), false),
+                            section.getDouble("weight", 0)
+                    );
                 }
             }
         }

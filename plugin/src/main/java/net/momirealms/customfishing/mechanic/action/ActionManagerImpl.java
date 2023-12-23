@@ -115,7 +115,7 @@ public class ActionManagerImpl implements ActionManager {
     // Method to load global event actions from the plugin's configuration file.
     private void loadGlobalEventActions() {
         YamlConfiguration config = plugin.getConfig("config.yml");
-        GlobalSettings.load(config.getConfigurationSection("mechanics.global-events"));
+        GlobalSettings.loadEvents(config.getConfigurationSection("mechanics.global-events"));
     }
 
     /**
@@ -741,9 +741,9 @@ public class ActionManagerImpl implements ActionManager {
                             condition.getPlayer(),
                             PlaceholderManagerImpl.getInstance().parse(condition.getPlayer(), title, condition.getArgs()),
                             PlaceholderManagerImpl.getInstance().parse(condition.getPlayer(), subtitle, condition.getArgs()),
-                            fadeIn * 50,
-                            stay * 50,
-                            fadeOut * 50
+                            fadeIn,
+                            stay,
+                            fadeOut
                     );
                 };
             } else {
@@ -770,9 +770,9 @@ public class ActionManagerImpl implements ActionManager {
                                             condition.getPlayer(),
                                             PlaceholderManagerImpl.getInstance().parse(condition.getPlayer(), title, condition.getArgs()),
                                             PlaceholderManagerImpl.getInstance().parse(condition.getPlayer(), subtitle, condition.getArgs()),
-                                            fadeIn * 50,
-                                            stay * 50,
-                                            fadeOut * 50
+                                            fadeIn,
+                                            stay,
+                                            fadeOut
                                     );
                                     condition.delArg("{near}");
                                 }
@@ -788,7 +788,9 @@ public class ActionManagerImpl implements ActionManager {
         registerAction("random-title", (args, chance) -> {
             if (args instanceof ConfigurationSection section) {
                 List<String> titles = section.getStringList("titles");
+                if (titles.size() == 0) titles.add("");
                 List<String> subtitles = section.getStringList("subtitles");
+                if (subtitles.size() == 0) subtitles.add("");
                 int fadeIn = section.getInt("fade-in", 20);
                 int stay = section.getInt("stay", 30);
                 int fadeOut = section.getInt("fade-out", 10);
@@ -798,9 +800,9 @@ public class ActionManagerImpl implements ActionManager {
                             condition.getPlayer(),
                             PlaceholderManagerImpl.getInstance().parse(condition.getPlayer(), titles.get(ThreadLocalRandom.current().nextInt(titles.size())), condition.getArgs()),
                             PlaceholderManagerImpl.getInstance().parse(condition.getPlayer(), subtitles.get(ThreadLocalRandom.current().nextInt(subtitles.size())), condition.getArgs()),
-                            fadeIn * 50,
-                            stay * 50,
-                            fadeOut * 50
+                            fadeIn,
+                            stay,
+                            fadeOut
                     );
                 };
             } else {

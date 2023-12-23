@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package net.momirealms.customfishing.mechanic.misc.value;
+package net.momirealms.customfishing.api.mechanic.misc;
 
 import org.bukkit.entity.Player;
 

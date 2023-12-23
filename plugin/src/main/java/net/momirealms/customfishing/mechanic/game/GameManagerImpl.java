@@ -237,8 +237,7 @@ public class GameManagerImpl implements GameManager {
                 }
 
                 @Override
-                public void run() {
-                    super.run();
+                public void onTick() {
                     if (face) progress++;
                     else progress--;
                     if (progress > totalWidth) {
@@ -256,7 +255,7 @@ public class GameManagerImpl implements GameManager {
                                + OffsetUtils.getOffsetChars(pointerOffset + progress)
                                + FontUtils.surroundWithFont(pointerImage, font)
                                + OffsetUtils.getOffsetChars(totalWidth - progress - pointerWidth);
-                    AdventureManagerImpl.getInstance().sendTitle(player, sendTitle, bar,0,500,0);
+                    AdventureManagerImpl.getInstance().sendTitle(player, sendTitle, bar,0,10,0);
                 }
 
                 @Override
@@ -312,8 +311,7 @@ public class GameManagerImpl implements GameManager {
                 }
 
                 @Override
-                public void run() {
-                    super.run();
+                public void onTick() {
                     if (player.isSneaking()) addV();
                     else reduceV();
                     if (timer < 40 - (settings.getDifficulty() / 10)) {
@@ -401,7 +399,7 @@ public class GameManagerImpl implements GameManager {
                             tip != null && !played ? tip : title.replace("{progress}", progress[(int) ((hold_time / time_requirement) * progress.length)]),
                             bar,
                             0,
-                            500,
+                            10,
                             0
                     );
                 }
@@ -443,8 +441,7 @@ public class GameManagerImpl implements GameManager {
                 }
 
                 @Override
-                public void run() {
-                    super.run();
+                public void onTick() {
                     if (struggling_time <= 0) {
                         if (Math.random() < ((double) settings.getDifficulty() / 4000)) {
                             struggling_time = (int) (10 + Math.random() * (settings.getDifficulty() / 4));
@@ -494,7 +491,7 @@ public class GameManagerImpl implements GameManager {
                             tip != null && !played ? tip : title.replace("{tension}", tension[(int) ((strain / ultimateTension) * tension.length)]),
                             bar,
                             0,
-                            500,
+                            10,
                             0
                     );
                 }
@@ -519,8 +516,7 @@ public class GameManagerImpl implements GameManager {
                 }
 
                 @Override
-                public void run() {
-                    super.run();
+                public void onTick() {
                     showUI();
                 }
 
@@ -540,7 +536,7 @@ public class GameManagerImpl implements GameManager {
                             title.replace("{click}", String.valueOf(clickedTimes)),
                             subtitle.replace("{clicks}", String.valueOf(requiredTimes)).replace("{time}", String.format("%.1f", ((double) deadline - System.currentTimeMillis())/1000)),
                             0,
-                            500,
+                            10,
                             0
                     );
                 }
@@ -575,8 +571,7 @@ public class GameManagerImpl implements GameManager {
                 }
 
                 @Override
-                public void run() {
-                    super.run();
+                public void onTick() {
                     timer++;
                     if (timer % (21 - settings.getDifficulty() / 5) == 0) {
                         movePointer();
@@ -617,7 +612,7 @@ public class GameManagerImpl implements GameManager {
                             stringBuilder.toString(),
                             subtitle,
                             0,
-                            500,
+                            10,
                             0
                     );
                 }
@@ -665,8 +660,7 @@ public class GameManagerImpl implements GameManager {
                 }
 
                 @Override
-                public void run() {
-                    super.run();
+                public void onTick() {
                     if (face) {
                         progress++;
                         if (progress >= barEffectiveWidth - 1) {
@@ -694,7 +688,7 @@ public class GameManagerImpl implements GameManager {
                             title,
                             bar,
                             0,
-                            500,
+                            10,
                             0
                     );
                 }
@@ -750,8 +744,7 @@ public class GameManagerImpl implements GameManager {
                 }
 
                 @Override
-                public void run() {
-                    super.run();
+                public void onTick() {
                     if (timer < 40 - (settings.getDifficulty() / 10)) {
                         timer++;
                     } else {
@@ -839,7 +832,7 @@ public class GameManagerImpl implements GameManager {
                             tip != null && !played ? tip : title.replace("{progress}", progress[(int) ((hold_time / time_requirement) * progress.length)]),
                             bar,
                             0,
-                            500,
+                            10,
                             0
                     );
                 }

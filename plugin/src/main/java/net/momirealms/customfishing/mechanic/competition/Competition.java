@@ -93,7 +93,7 @@ public class Competition implements FishingCompetition {
 
         Action[] actions = config.getStartActions();
         if (actions != null) {
-            Condition condition = new Condition(null, null, new HashMap<>());
+            Condition condition = new Condition(null, null, this.publicPlaceholders);
             for (Action action : actions) {
                 action.trigger(condition);
             }
@@ -186,21 +186,18 @@ public class Competition implements FishingCompetition {
                     Player player = Bukkit.getPlayer(competitionPlayer.left());
                     if (player != null)
                         for (Action action : rewardsMap.get(String.valueOf(i)))
-                            action.trigger(new Condition(player));
-                    i++;
+                            action.trigger(new Condition(player, this.publicPlaceholders));
                 } else {
                     Action[] actions = rewardsMap.get("participation");
                     if (actions != null) {
-                        iterator.forEachRemaining(playerName -> {
-                            Player player = Bukkit.getPlayer(competitionPlayer.left());
+                        Player player = Bukkit.getPlayer(competitionPlayer.left()); {
                             if (player != null)
                                 for (Action action : actions)
-                                    action.trigger(new Condition(player));
-                        });
-                    } else {
-                        break;
+                                    action.trigger(new Condition(player, this.publicPlaceholders));
+                        }
                     }
                 }
+                i++;
             }
         }
 

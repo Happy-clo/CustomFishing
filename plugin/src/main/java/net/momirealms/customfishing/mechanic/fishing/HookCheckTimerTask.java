@@ -26,7 +26,7 @@ import net.momirealms.customfishing.api.event.LavaFishingEvent;
 import net.momirealms.customfishing.api.mechanic.TempFishingState;
 import net.momirealms.customfishing.api.mechanic.action.ActionTrigger;
 import net.momirealms.customfishing.api.mechanic.condition.FishingPreparation;
-import net.momirealms.customfishing.api.mechanic.effect.Effect;
+import net.momirealms.customfishing.api.mechanic.effect.FishingEffect;
 import net.momirealms.customfishing.api.mechanic.loot.Loot;
 import net.momirealms.customfishing.api.scheduler.CancellableTask;
 import net.momirealms.customfishing.setting.CFConfig;
@@ -56,7 +56,7 @@ public class HookCheckTimerTask implements Runnable {
     private LavaEffectTask lavaFishingTask;
     private final FishHook fishHook;
     private final FishingPreparation fishingPreparation;
-    private final Effect initialEffect;
+    private final FishingEffect initialEffect;
     private final int lureLevel;
     private boolean firstTime;
     private boolean fishHooked;
@@ -77,7 +77,7 @@ public class HookCheckTimerTask implements Runnable {
             FishingManagerImpl manager,
             FishHook fishHook,
             FishingPreparation fishingPreparation,
-            Effect initialEffect
+            FishingEffect initialEffect
     ) {
         this.manager = manager;
         this.fishHook = fishHook;
@@ -102,17 +102,19 @@ public class HookCheckTimerTask implements Runnable {
         }
         if (fishHook.getLocation().getBlock().getType() == Material.LAVA) {
             // if player can fish in lava
-            if (!initialEffect.canLavaFishing()) {
-                this.destroy();
-                return;
-            }
             if (firstTime) {
                 this.fishingPreparation.setLocation(fishHook.getLocation());
+                this.fishingPreparation.mergeEffect(initialEffect);
+                if (!initialEffect.canLavaFishing()) {
+                    this.destroy();
+                    return;
+                }
                 this.fishingPreparation.insertArg("{lava}", "true");
                 this.fishingPreparation.triggerActions(ActionTrigger.LAND);
-                FishHookLandEvent event = new FishHookLandEvent(fishingPreparation.getPlayer(), FishHookLandEvent.Target.LAVA, fishHook);
+                FishHookLandEvent event = new FishHookLandEvent(fishingPreparation.getPlayer(), FishHookLandEvent.Target.LAVA, fishHook, initialEffect);
                 Bukkit.getPluginManager().callEvent(event);
-                firstTime = false;
+                this.setWaitTime();
+                this.firstTime = false;
                 this.setTempState();
             }
             // simulate fishing mechanic
@@ -138,14 +140,16 @@ public class HookCheckTimerTask implements Runnable {
         }
         if (fishHook.isInWater()) {
             this.fishingPreparation.setLocation(fishHook.getLocation());
+            this.fishingPreparation.mergeEffect(initialEffect);
             this.fishingPreparation.insertArg("{lava}", "false");
             this.fishingPreparation.insertArg("{open-water}", String.valueOf(fishHook.isInOpenWater()));
             this.fishingPreparation.triggerActions(ActionTrigger.LAND);
-            FishHookLandEvent event = new FishHookLandEvent(fishingPreparation.getPlayer(), FishHookLandEvent.Target.WATER, fishHook);
+            FishHookLandEvent event = new FishHookLandEvent(fishingPreparation.getPlayer(), FishHookLandEvent.Target.WATER, fishHook, initialEffect);
             Bukkit.getPluginManager().callEvent(event);
             // if the hook is in water
             // then cancel the task
             this.destroy();
+            this.setWaitTime();
             this.setTempState();
             return;
         }
@@ -204,10 +208,20 @@ public class HookCheckTimerTask implements Runnable {
      */
     private void startLavaFishingMechanic() {
         // get random time
-        int random = ThreadLocalRandom.current().nextInt(CFConfig.lavaMinTime, CFConfig.lavaMaxTime);
-        random -= lureLevel * 100;
-        random *= initialEffect.getWaitTimeMultiplier();
-        random = Math.max(CFConfig.lavaMinTime, random);
+        int random;
+        if (CFConfig.overrideVanilla) {
+            random = ThreadLocalRandom.current().nextInt(CFConfig.lavaMinTime, CFConfig.lavaMaxTime);
+            random *= initialEffect.getWaitTimeMultiplier();
+            random += initialEffect.getWaitTime();
+            random = Math.max(1, random);
+        } else {
+            random = ThreadLocalRandom.current().nextInt(CFConfig.lavaMinTime, CFConfig.lavaMaxTime);
+            random -= lureLevel * 100;
+            random = Math.max(CFConfig.lavaMinTime, random);
+            random *= initialEffect.getWaitTimeMultiplier();
+            random += initialEffect.getWaitTime();
+            random = Math.max(1, random);
+        }
 
         // lava effect task (Three seconds in advance)
         this.lavaFishingTask = new LavaEffectTask(
@@ -276,5 +290,15 @@ public class HookCheckTimerTask implements Runnable {
      */
     public boolean isFishHooked() {
         return fishHooked;
+    }
+
+    private void setWaitTime() {
+        if (CFConfig.overrideVanilla) {
+            double initialTime = ThreadLocalRandom.current().nextInt(CFConfig.waterMaxTime - CFConfig.waterMinTime + 1) + CFConfig.waterMinTime;
+            fishHook.setWaitTime(Math.max(1, (int) (initialTime * initialEffect.getWaitTimeMultiplier() + initialEffect.getWaitTime())));
+        } else {
+            fishHook.setMinWaitTime(Math.max(1, (int) (fishHook.getMinWaitTime() * initialEffect.getWaitTimeMultiplier() + initialEffect.getWaitTime())));
+            fishHook.setMaxWaitTime(Math.max(2, (int) (fishHook.getMaxWaitTime() * initialEffect.getWaitTimeMultiplier() + initialEffect.getWaitTime())));
+        }
     }
 }

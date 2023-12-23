@@ -17,9 +17,10 @@
 
 package net.momirealms.customfishing.mechanic.misc.value;
 
+import net.momirealms.customfishing.api.mechanic.misc.Value;
 import org.bukkit.entity.Player;
 
-public class PlainValue implements Value{
+public class PlainValue implements Value {
 
     private final double value;
 

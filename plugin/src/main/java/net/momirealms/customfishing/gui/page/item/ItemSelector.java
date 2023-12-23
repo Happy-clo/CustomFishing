@@ -1,3 +1,20 @@
+/*
+ *  Copyright (C) <2022> <XiaoMoMi>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package net.momirealms.customfishing.gui.page.item;
 
 import de.tr7zw.changeme.nbtapi.NBTItem;
@@ -10,6 +27,7 @@ import net.momirealms.customfishing.gui.icon.BackGroundItem;
 import net.momirealms.customfishing.gui.icon.BackToFolderItem;
 import net.momirealms.customfishing.gui.icon.NextPageItem;
 import net.momirealms.customfishing.gui.icon.PreviousPageItem;
+import net.momirealms.customfishing.setting.CFLocale;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -36,19 +54,20 @@ import java.util.Map;
 
 public class ItemSelector implements YamlPage {
 
-    public static final String SEARCH = "Search";
+    private final String SEARCH;
     private final Player player;
     private final YamlConfiguration yaml;
     private String prefix;
     private final File file;
     private long coolDown;
-    private String type;
+    private final String type;
 
     public ItemSelector(Player player, File file, String type) {
         this.yaml = YamlConfiguration.loadConfiguration(file);
         this.player = player;
         this.file = file;
         this.type = type;
+        this.SEARCH = CFLocale.GUI_SEARCH;
         this.prefix = SEARCH;
         this.reOpenWithFilter(SEARCH);
     }
@@ -61,9 +80,7 @@ public class ItemSelector implements YamlPage {
     public void reOpenWithFilter(String filter) {
         Item border = new SimpleItem(new ItemBuilder(Material.AIR));
         Gui upperGui = Gui.normal()
-                .setStructure(
-                        "a # #"
-                )
+                .setStructure("a # #")
                 .addIngredient('a', new SimpleItem(new ItemBuilder(Material.NAME_TAG).setDisplayName(filter)))
                 .addIngredient('#', border)
                 .build();
@@ -86,8 +103,9 @@ public class ItemSelector implements YamlPage {
         var window = AnvilWindow.split()
                 .setViewer(player)
                 .setTitle(new ShadedAdventureComponentWrapper(
-                        AdventureManagerImpl.getInstance().getComponentFromMiniMessage("Select item to edit")
-                ))
+                        AdventureManagerImpl.getInstance().getComponentFromMiniMessage(
+                                CFLocale.GUI_SELECT_ITEM
+                        )))
                 .addRenameHandler(s -> {
                     long current = System.currentTimeMillis();
                     if (current - coolDown < 100) return;
@@ -95,6 +113,52 @@ public class ItemSelector implements YamlPage {
                     prefix = s;
                     coolDown = current;
                     reOpenWithFilter(s);
+                })
+                .setUpperGui(upperGui)
+                .setLowerGui(gui)
+                .build();
+
+        window.open();
+    }
+
+    public void reOpenWithNewKey() {
+        String tempKey = CFLocale.GUI_TEMP_NEW_KEY;
+        prefix = tempKey;
+        var confirmIcon = new ConfirmIcon();
+        Item border = new SimpleItem(new ItemBuilder(Material.AIR));
+        Gui upperGui = Gui.normal()
+                .setStructure("a # b")
+                .addIngredient('a', new SimpleItem(new ItemBuilder(Material.NAME_TAG).setDisplayName(tempKey)))
+                .addIngredient('b', confirmIcon)
+                .addIngredient('#', border)
+                .build();
+
+        var gui = PagedGui.items()
+                .setStructure(
+                        "x x x x x x x x x",
+                        "x x x x x x x x x",
+                        "x x x x x x x x x",
+                        "# # a # c # b # #"
+                )
+                .addIngredient('x', Markers.CONTENT_LIST_SLOT_HORIZONTAL)
+                .addIngredient('#', new BackGroundItem())
+                .addIngredient('a', new PreviousPageItem())
+                .addIngredient('b', new NextPageItem())
+                .addIngredient('c', new BackToFolderItem(file.getParentFile()))
+                .build();
+
+        var window = AnvilWindow.split()
+                .setViewer(player)
+                .setTitle(new ShadedAdventureComponentWrapper(
+                        AdventureManagerImpl.getInstance().getComponentFromMiniMessage(CFLocale.GUI_SET_NEW_KEY)
+                ))
+                .addRenameHandler(s -> {
+                    long current = System.currentTimeMillis();
+                    if (current - coolDown < 100) return;
+                    if (s.equals(tempKey)) return;
+                    prefix = s;
+                    coolDown = current;
+                    confirmIcon.notifyWindows();
                 })
                 .setUpperGui(upperGui)
                 .setLowerGui(gui)
@@ -121,6 +185,7 @@ public class ItemSelector implements YamlPage {
             }
             itemList.add(new ItemInList(key, new ItemBuilder(Material.STRUCTURE_VOID), this));
         }
+        itemList.add(new AddKey());
         return itemList;
     }
 
@@ -130,18 +195,10 @@ public class ItemSelector implements YamlPage {
 
     public void openEditor(String key) {
         switch (type) {
-            case "item" -> {
-                new SectionEditor(player, key, this, yaml.getConfigurationSection(key));
-            }
-            case "rod" -> {
-                new RodEditor(player, key, this, yaml.getConfigurationSection(key));
-            }
-            case "bait" -> {
-                new BaitEditor(player, key, this, yaml.getConfigurationSection(key));
-            }
-            case "hook" -> {
-                new HookEditor(player, key, this, yaml.getConfigurationSection(key));
-            }
+            case "item" -> new SectionEditor(player, key, this, yaml.getConfigurationSection(key));
+            case "rod" -> new RodEditor(player, key, this, yaml.getConfigurationSection(key));
+            case "bait" -> new BaitEditor(player, key, this, yaml.getConfigurationSection(key));
+            case "hook" -> new HookEditor(player, key, this, yaml.getConfigurationSection(key));
         }
     }
 
@@ -166,9 +223,9 @@ public class ItemSelector implements YamlPage {
                             key
                     ))).addLoreLines("")
                     .addLoreLines(new ShadedAdventureComponentWrapper(AdventureManagerImpl.getInstance().getComponentFromMiniMessage(
-                            "<#00FF7F> -> Left click to edit"
+                            CFLocale.GUI_LEFT_CLICK_EDIT
                     ))).addLoreLines(new ShadedAdventureComponentWrapper(AdventureManagerImpl.getInstance().getComponentFromMiniMessage(
-                            "<#FF6347> -> Right click to delete"
+                            CFLocale.GUI_RIGHT_CLICK_DELETE
                     )));
             this.itemSelector = itemSelector;
         }
@@ -187,6 +244,59 @@ public class ItemSelector implements YamlPage {
                 this.itemSelector.save();
                 this.itemSelector.reOpenWithFilter(itemSelector.prefix);
             }
+        }
+    }
+
+    public class AddKey extends AbstractItem {
+
+        @Override
+        public ItemProvider getItemProvider() {
+            return new ItemBuilder(Material.ANVIL).setDisplayName(new ShadedAdventureComponentWrapper(AdventureManagerImpl.getInstance().getComponentFromMiniMessage(
+                    CFLocale.GUI_ADD_NEW_KEY
+            )));
+        }
+
+        @Override
+        public void handleClick(@NotNull ClickType clickType, @NotNull Player player, @NotNull InventoryClickEvent event) {
+            reOpenWithNewKey();
+        }
+    }
+
+    public class ConfirmIcon extends AbstractItem {
+
+        @Override
+        public ItemProvider getItemProvider() {
+            if (prefix != null && !yaml.contains(prefix) && prefix.matches("^[a-zA-Z0-9_]+$")) {
+                var builder = new ItemBuilder(Material.NAME_TAG)
+                        .setDisplayName(new ShadedAdventureComponentWrapper(AdventureManagerImpl.getInstance().getComponentFromMiniMessage(
+                                prefix
+                        )));
+                builder.addLoreLines(new ShadedAdventureComponentWrapper(AdventureManagerImpl.getInstance().getComponentFromMiniMessage(
+                        CFLocale.GUI_CLICK_CONFIRM
+                ))).addLoreLines(new ShadedAdventureComponentWrapper(AdventureManagerImpl.getInstance().getComponentFromMiniMessage(
+                        CFLocale.GUI_RIGHT_CLICK_CANCEL
+                )));
+                return builder;
+            } else {
+                return new ItemBuilder(Material.BARRIER)
+                        .setDisplayName(new ShadedAdventureComponentWrapper(AdventureManagerImpl.getInstance().getComponentFromMiniMessage(
+                            CFLocale.GUI_DUPE_INVALID_KEY
+                        )));
+            }
+        }
+
+        @Override
+        public void handleClick(@NotNull ClickType clickType, @NotNull Player player, @NotNull InventoryClickEvent event) {
+            if (clickType.isLeftClick()) {
+                if (prefix != null && !yaml.contains(prefix) && prefix.matches("^[a-zA-Z0-9_]+$")) {
+                    yaml.createSection(prefix);
+                    save();
+                } else {
+                    return;
+                }
+            }
+            prefix = SEARCH;
+            reOpenWithFilter(SEARCH);
         }
     }
 }

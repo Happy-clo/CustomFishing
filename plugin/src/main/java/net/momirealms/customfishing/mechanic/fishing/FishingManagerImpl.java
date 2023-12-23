@@ -57,7 +57,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.*;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.Nullable;
@@ -152,6 +154,25 @@ public class FishingManagerImpl implements Listener, FishingManager {
         final Player player = event.getPlayer();
         this.removeHook(event.getPlayer().getUniqueId());
         this.removeTempFishingState(player);
+    }
+
+    /**
+     * Known bug: When you fish, both left click air and right click air
+     * are triggered. And you can't cancel the left click event.
+     */
+    @EventHandler
+    public void onLeftClick(PlayerInteractEvent event) {
+        if (event.getAction() != Action.LEFT_CLICK_AIR)
+            return;
+        if (event.getMaterial() != Material.FISHING_ROD)
+            return;
+        if (event.getHand() != EquipmentSlot.HAND)
+            return;
+        GamingPlayer gamingPlayer = gamingPlayerMap.get(event.getPlayer().getUniqueId());
+        if (gamingPlayer != null) {
+            if (gamingPlayer.onLeftClick())
+                event.setCancelled(true);
+        }
     }
 
     @EventHandler
@@ -276,15 +297,12 @@ public class FishingManagerImpl implements Listener, FishingManager {
         }
         // Check mechanic requirements
         if (!RequirementManager.isRequirementMet(
-                fishingPreparation, RequirementManagerImpl.mechanicRequirements
+            fishingPreparation, RequirementManagerImpl.mechanicRequirements
         )) {
             removeTempFishingState(player);
             return;
         }
-        // Merge rod/bait/util effects
         FishingEffect initialEffect = plugin.getEffectManager().getInitialEffect();
-        fishingPreparation.mergeEffect(initialEffect);
-
         // Merge totem effects
         EffectCarrier totemEffect = plugin.getTotemManager().getTotemEffect(player.getLocation());
         if (totemEffect != null)
@@ -302,9 +320,7 @@ public class FishingManagerImpl implements Listener, FishingManager {
         // Store fishhook entity and apply the effects
         final FishHook fishHook = event.getHook();
         this.hookCacheMap.put(player.getUniqueId(), fishHook);
-//        fishHook.setMaxWaitTime(Math.max(100, (int) (fishHook.getMaxWaitTime() * initialEffect.getHookTimeModifier())));
-//        fishHook.setMinWaitTime(Math.max(100, (int) (fishHook.getMinWaitTime() * initialEffect.getHookTimeModifier())));
-        fishHook.setWaitTime(Math.max(1, (int) (fishHook.getWaitTime() * initialEffect.getWaitTimeMultiplier() + initialEffect.getWaitTime())));
+
         // Reduce amount & Send animation
         var baitItem = fishingPreparation.getBaitItemStack();
         if (baitItem != null) {
@@ -404,8 +420,10 @@ public class FishingManagerImpl implements Listener, FishingManager {
             temp.getPreparation().triggerActions(ActionTrigger.HOOK);
             if (!loot.disableGame()) {
                 // start the game if the loot has a game
-                event.setCancelled(true);
-                startFishingGame(player, temp.getPreparation(), temp.getEffect());
+
+                if (startFishingGame(player, temp.getPreparation(), temp.getEffect())) {
+                    event.setCancelled(true);
+                }
             } else {
                 // If the game is disabled, then do success actions
                 success(temp, event.getHook());
@@ -529,22 +547,19 @@ public class FishingManagerImpl implements Listener, FishingManager {
         gamingPlayerMap.remove(uuid);
         plugin.getScheduler().runTaskSync(() -> {
 
-            if (player.getGameMode() != GameMode.CREATIVE)
-                outer: {
-                    ItemStack rod = tempFishingState.getPreparation().getRodItemStack();
-                    PlayerItemDamageEvent damageEvent = new PlayerItemDamageEvent(player, rod, 1, 1);
-                    Bukkit.getPluginManager().callEvent(damageEvent);
-                    if (damageEvent.isCancelled()) {
-                        break outer;
-                    }
+            if (player.getGameMode() != GameMode.CREATIVE) {
+                ItemStack rod = tempFishingState.getPreparation().getRodItemStack();
+                plugin.getScheduler().runTaskSyncLater(() -> {
                     ItemUtils.decreaseHookDurability(rod, 1, false);
                     ItemUtils.decreaseDurability(player, rod, 1, true);
-                }
+                }, player.getLocation(), 1);
+            }
 
-            if (gamingPlayer.isSuccessful())
+            if (gamingPlayer.isSuccessful()) {
                 success(tempFishingState, fishHook);
-            else
+            } else {
                 fail(tempFishingState, fishHook);
+            }
 
             fishHook.remove();
 
@@ -620,7 +635,6 @@ public class FishingManagerImpl implements Listener, FishingManager {
 
         switch (loot.getType()) {
             case ITEM -> {
-
                 // build the items for multiple times instead of using setAmount() to make sure that each item is unique
                 if (loot.getID().equals("vanilla")) {
                     Pair<ItemStack, Integer> pair = vanillaLootMap.remove(player.getUniqueId());
@@ -722,21 +736,21 @@ public class FishingManagerImpl implements Listener, FishingManager {
      * @param effect    The effect applied to the game.
      */
     @Override
-    public void startFishingGame(Player player, Condition condition, Effect effect) {
+    public boolean startFishingGame(Player player, Condition condition, Effect effect) {
         Map<String, Double> gameWithWeight = plugin.getGameManager().getGameWithWeight(condition);
         plugin.debug(gameWithWeight.toString());
         String random = WeightUtils.getRandom(gameWithWeight);
         Pair<BasicGameConfig, GameInstance> gamePair = plugin.getGameManager().getGameInstance(random);
         if (random == null) {
-            LogUtils.warn("No game is available for player:" + player.getName() + " location:" + condition.getLocation());
-            return;
+            plugin.debug("No game is available for player:" + player.getName() + " location:" + condition.getLocation());
+            return false;
         }
         if (gamePair == null) {
             LogUtils.warn(String.format("Game %s doesn't exist.", random));
-            return;
+            return false;
         }
         plugin.debug("Game: " + random);
-        startFishingGame(player, Objects.requireNonNull(gamePair.left().getGameSetting(effect)), gamePair.right());
+        return startFishingGame(player, Objects.requireNonNull(gamePair.left().getGameSetting(effect)), gamePair.right());
     }
 
     /**
@@ -747,14 +761,16 @@ public class FishingManagerImpl implements Listener, FishingManager {
      * @param gameInstance The instance of the fishing game to start.
      */
     @Override
-    public void startFishingGame(Player player, GameSettings settings, GameInstance gameInstance) {
+    public boolean startFishingGame(Player player, GameSettings settings, GameInstance gameInstance) {
         plugin.debug("Difficulty:" + settings.getDifficulty());
         plugin.debug("Time:" + settings.getTime());
         FishHook hook = getHook(player.getUniqueId());
         if (hook != null) {
             this.gamingPlayerMap.put(player.getUniqueId(), gameInstance.start(player, hook, settings));
+            return true;
         } else {
             LogUtils.warn("It seems that player " + player.getName() + " is not fishing. Fishing game failed to start.");
+            return false;
         }
     }
 

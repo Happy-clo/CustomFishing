@@ -44,6 +44,8 @@ import org.bukkit.inventory.meta.ItemMeta;
  */
 public class ItemUtils {
 
+    private ItemUtils() {}
+
     /**
      * Updates the lore of an NBTItem based on its custom NBT tags.
      *
@@ -205,16 +207,16 @@ public class ItemUtils {
     public static void decreaseDurability(Player player, ItemStack itemStack, int amount, boolean updateLore) {
         if (itemStack == null || itemStack.getType() == Material.AIR)
             return;
-        int unBreakingLevel = itemStack.getEnchantmentLevel(Enchantment.DURABILITY);
-        if (Math.random() > (double) 1 / (unBreakingLevel + 1)) {
-            return;
-        }
         NBTItem nbtItem = new NBTItem(itemStack);
-        if (nbtItem.getByte("Unbreakable") == 1) {
-            return;
-        }
         NBTCompound cfCompound = nbtItem.getCompound("CustomFishing");
         if (cfCompound != null && cfCompound.hasTag("max_dur")) {
+            int unBreakingLevel = itemStack.getEnchantmentLevel(Enchantment.DURABILITY);
+            if (Math.random() > (double) 1 / (unBreakingLevel + 1)) {
+                return;
+            }
+            if (nbtItem.getByte("Unbreakable") == 1) {
+                return;
+            }
             int max = cfCompound.getInteger("max_dur");
             int current = cfCompound.getInteger("cur_dur") - amount;
             cfCompound.setInteger("cur_dur", current);
@@ -228,9 +230,16 @@ public class ItemUtils {
             }
         } else {
             ItemMeta previousMeta = itemStack.getItemMeta().clone();
-            PlayerItemDamageEvent itemDamageEvent = new PlayerItemDamageEvent(player, itemStack, amount);
+            PlayerItemDamageEvent itemDamageEvent = new PlayerItemDamageEvent(player, itemStack, amount, amount);
             Bukkit.getPluginManager().callEvent(itemDamageEvent);
-            if (!itemStack.getItemMeta().equals(previousMeta)) {
+            if (!itemStack.getItemMeta().equals(previousMeta) || itemDamageEvent.isCancelled()) {
+                return;
+            }
+            int unBreakingLevel = itemStack.getEnchantmentLevel(Enchantment.DURABILITY);
+            if (Math.random() > (double) 1 / (unBreakingLevel + 1)) {
+                return;
+            }
+            if (nbtItem.getByte("Unbreakable") == 1) {
                 return;
             }
             int damage = nbtItem.getInteger("Damage") + amount;
