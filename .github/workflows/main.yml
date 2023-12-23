@@ -30,4 +30,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
          name: CustomFishing
-         path: build/libs
+         path: /home/runner/work/CustomFishing
