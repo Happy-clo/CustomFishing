@@ -152,15 +152,23 @@ public class FishingManagerImpl implements Listener, FishingManager {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         final Player player = event.getPlayer();
-        this.removeHook(event.getPlayer().getUniqueId());
+        final UUID uuid = player.getUniqueId();
+        this.removeHook(uuid);
         this.removeTempFishingState(player);
+        this.removeHookCheckTask(player);
+        this.vanillaLootMap.remove(uuid);
+        GamingPlayer gamingPlayer = gamingPlayerMap.remove(player.getUniqueId());
+        if (gamingPlayer != null) {
+            gamingPlayer.cancel();
+        }
     }
 
     /**
-     * Known bug: When you fish, both left click air and right click air
+     * Known bug: This is a Minecraft packet limitation
+     * When you fish, both left click air and right click air
      * are triggered. And you can't cancel the left click event.
      */
-    @EventHandler
+    @EventHandler (ignoreCancelled = false)
     public void onLeftClick(PlayerInteractEvent event) {
         if (event.getAction() != Action.LEFT_CLICK_AIR)
             return;
@@ -175,9 +183,8 @@ public class FishingManagerImpl implements Listener, FishingManager {
         }
     }
 
-    @EventHandler
+    @EventHandler (ignoreCancelled = true)
     public void onSwapHand(PlayerSwapHandItemsEvent event) {
-        if (event.isCancelled()) return;
         GamingPlayer gamingPlayer = gamingPlayerMap.get(event.getPlayer().getUniqueId());
         if (gamingPlayer != null) {
             if (gamingPlayer.onSwapHand())
@@ -191,6 +198,17 @@ public class FishingManagerImpl implements Listener, FishingManager {
         GamingPlayer gamingPlayer = gamingPlayerMap.get(event.getPlayer().getUniqueId());
         if (gamingPlayer != null) {
             if (gamingPlayer.onJump())
+                event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onSneak(PlayerToggleSneakEvent event) {
+        if (event.isCancelled()) return;
+        if (!event.isSneaking()) return;
+        GamingPlayer gamingPlayer = gamingPlayerMap.get(event.getPlayer().getUniqueId());
+        if (gamingPlayer != null) {
+            if (gamingPlayer.onSneak())
                 event.setCancelled(true);
         }
     }
@@ -329,6 +347,7 @@ public class FishingManagerImpl implements Listener, FishingManager {
             new BaitAnimationTask(plugin, player, fishHook, cloned);
             baitItem.setAmount(baitItem.getAmount() - 1);
         }
+
         // Arrange hook check task
         this.hookCheckMap.put(player.getUniqueId(), new HookCheckTimerTask(this, fishHook, fishingPreparation, initialEffect));
         // trigger actions
@@ -459,10 +478,14 @@ public class FishingManagerImpl implements Listener, FishingManager {
             var fishingPreparation = temp.getPreparation();
             fishingPreparation.setLocation(event.getHook().getLocation());
 
+            if (!loot.disableGlobalAction())
+                GlobalSettings.triggerLootActions(ActionTrigger.BITE, fishingPreparation);
             loot.triggerActions(ActionTrigger.BITE, fishingPreparation);
             fishingPreparation.triggerActions(ActionTrigger.BITE);
 
             if (loot.instanceGame() && !loot.disableGame()) {
+                if (!loot.disableGlobalAction())
+                    GlobalSettings.triggerLootActions(ActionTrigger.HOOK, fishingPreparation);
                 loot.triggerActions(ActionTrigger.HOOK, fishingPreparation);
                 fishingPreparation.triggerActions(ActionTrigger.HOOK);
                 startFishingGame(player, fishingPreparation, temp.getEffect());
@@ -500,11 +523,14 @@ public class FishingManagerImpl implements Listener, FishingManager {
             var temp = getTempFishingState(uuid);
             if (temp != null ) {
                 Loot loot = temp.getLoot();
-                loot.triggerActions(ActionTrigger.HOOK, temp.getPreparation());
-                temp.getPreparation().triggerActions(ActionTrigger.HOOK);
+                var fishingPreparation = temp.getPreparation();
+                if (!loot.disableGlobalAction())
+                    GlobalSettings.triggerLootActions(ActionTrigger.HOOK, fishingPreparation);
+                loot.triggerActions(ActionTrigger.HOOK, fishingPreparation);
+                fishingPreparation.triggerActions(ActionTrigger.HOOK);
                 if (!loot.disableGame()) {
                     event.setCancelled(true);
-                    startFishingGame(player, temp.getPreparation(), temp.getEffect());
+                    startFishingGame(player, fishingPreparation, temp.getEffect());
                 } else {
                     success(temp, event.getHook());
                 }
@@ -586,7 +612,8 @@ public class FishingManagerImpl implements Listener, FishingManager {
             return;
         }
 
-        GlobalSettings.triggerLootActions(ActionTrigger.FAILURE, fishingPreparation);
+        if (!loot.disableGlobalAction())
+            GlobalSettings.triggerLootActions(ActionTrigger.FAILURE, fishingPreparation);
         loot.triggerActions(ActionTrigger.FAILURE, fishingPreparation);
         fishingPreparation.triggerActions(ActionTrigger.FAILURE);
 
@@ -662,11 +689,16 @@ public class FishingManagerImpl implements Listener, FishingManager {
                     }
                 }
             }
-            case ENTITY -> plugin.getEntityManager().summonEntity(hook.getLocation(), player.getLocation(), loot);
-            case BLOCK -> plugin.getBlockManager().summonBlock(player, hook.getLocation(), player.getLocation(), loot);
+            case ENTITY -> {
+                plugin.getEntityManager().summonEntity(hook.getLocation(), player.getLocation(), loot);
+                doSuccessActions(loot, effect, fishingPreparation, player);
+            }
+            case BLOCK -> {
+                plugin.getBlockManager().summonBlock(player, hook.getLocation(), player.getLocation(), loot);
+                doSuccessActions(loot, effect, fishingPreparation, player);
+            }
         }
 
-        doSuccessActions(loot, effect, fishingPreparation, player);
         if (player.getGameMode() != GameMode.CREATIVE) {
             ItemStack rod = state.getPreparation().getRodItemStack();
             ItemUtils.decreaseHookDurability(rod, 1, false);
@@ -720,7 +752,8 @@ public class FishingManagerImpl implements Listener, FishingManager {
         }
 
         // events and actions
-        GlobalSettings.triggerLootActions(ActionTrigger.SUCCESS, fishingPreparation);
+        if (!loot.disableGlobalAction())
+            GlobalSettings.triggerLootActions(ActionTrigger.SUCCESS, fishingPreparation);
         loot.triggerActions(ActionTrigger.SUCCESS, fishingPreparation);
         fishingPreparation.triggerActions(ActionTrigger.SUCCESS);
 
@@ -738,7 +771,8 @@ public class FishingManagerImpl implements Listener, FishingManager {
                 String size = fishingPreparation.getArg("{SIZE}");
                 if (size != null)
                     if (it.setSizeIfHigher(loot.getStatisticKey().getSizeKey(), Float.parseFloat(size))) {
-                        GlobalSettings.triggerLootActions(ActionTrigger.NEW_SIZE_RECORD, fishingPreparation);
+                        if (!loot.disableGlobalAction())
+                            GlobalSettings.triggerLootActions(ActionTrigger.NEW_SIZE_RECORD, fishingPreparation);
                         loot.triggerActions(ActionTrigger.NEW_SIZE_RECORD, fishingPreparation);
                     }
             });
@@ -758,7 +792,7 @@ public class FishingManagerImpl implements Listener, FishingManager {
         String random = WeightUtils.getRandom(gameWithWeight);
         Pair<BasicGameConfig, GameInstance> gamePair = plugin.getGameManager().getGameInstance(random);
         if (random == null) {
-            plugin.debug("No game is available for player:" + player.getName() + " location:" + condition.getLocation());
+            LogUtils.warn("No game is available for player:" + player.getName() + " location:" + condition.getLocation());
             return false;
         }
         if (gamePair == null) {
