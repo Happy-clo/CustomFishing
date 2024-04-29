@@ -308,7 +308,7 @@ public class FishingManagerImpl implements Listener, FishingManager {
      */
     public void onCastRod(PlayerFishEvent event) {
         var player = event.getPlayer();
-        var fishingPreparation = new FishingPreparation(player, plugin);
+        var fishingPreparation = new FishingPreparationImpl(player, plugin);
         if (!fishingPreparation.canFish()) {
             event.setCancelled(true);
             return;
@@ -317,7 +317,7 @@ public class FishingManagerImpl implements Listener, FishingManager {
         if (!RequirementManager.isRequirementMet(
             fishingPreparation, RequirementManagerImpl.mechanicRequirements
         )) {
-            removeTempFishingState(player);
+            this.removeTempFishingState(player);
             return;
         }
         FishingEffect initialEffect = plugin.getEffectManager().getInitialEffect();
@@ -444,6 +444,8 @@ public class FishingManagerImpl implements Listener, FishingManager {
                     event.setCancelled(true);
                 }
             } else {
+                // remove temp state if fishing game not exists
+                this.removeTempFishingState(player);
                 var hook = event.getHook();
                 // If the game is disabled, then do success actions
                 success(temp, hook);
@@ -716,7 +718,7 @@ public class FishingManagerImpl implements Listener, FishingManager {
      */
     private void doSuccessActions(Loot loot, Effect effect, FishingPreparation fishingPreparation, Player player) {
         FishingCompetition competition = plugin.getCompetitionManager().getOnGoingCompetition();
-        if (competition != null) {
+        if (competition != null && RequirementManager.isRequirementMet(fishingPreparation, competition.getConfig().getRequirements())) {
             String scoreStr = fishingPreparation.getArg("{CUSTOM_SCORE}");
             if (scoreStr != null) {
                 competition.refreshData(player, Double.parseDouble(scoreStr));
@@ -788,7 +790,6 @@ public class FishingManagerImpl implements Listener, FishingManager {
     @Override
     public boolean startFishingGame(Player player, Condition condition, Effect effect) {
         Map<String, Double> gameWithWeight = plugin.getGameManager().getGameWithWeight(condition);
-        plugin.debug(gameWithWeight.toString());
         String random = WeightUtils.getRandom(gameWithWeight);
         Pair<BasicGameConfig, GameInstance> gamePair = plugin.getGameManager().getGameInstance(random);
         if (random == null) {

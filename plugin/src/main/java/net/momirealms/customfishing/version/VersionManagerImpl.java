@@ -34,12 +34,14 @@ import java.util.concurrent.CompletableFuture;
 public class VersionManagerImpl implements VersionManager {
 
     private final boolean isNewerThan1_19_R2;
+    private final boolean isNewerThan1_19_R3;
     private final boolean isNewerThan1_20;
     private final boolean isNewerThan1_19;
     private final String serverVersion;
     private final CustomFishingPluginImpl plugin;
     private final boolean isSpigot;
-    private boolean isFolia;
+    private boolean hasRegionScheduler;
+    private boolean isMojmap;
     private final String pluginVersion;
 
     @SuppressWarnings("deprecation")
@@ -51,17 +53,19 @@ public class VersionManagerImpl implements VersionManager {
         String[] split = serverVersion.split("_");
         int main_ver = Integer.parseInt(split[1]);
 
-        // Determine if the server version is newer than 1_19_R2 and 1_20_R1
         if (main_ver >= 20) {
             isNewerThan1_19_R2 = true;
+            isNewerThan1_19_R3 = true;
             isNewerThan1_20 = true;
             isNewerThan1_19 = true;
         } else if (main_ver == 19) {
             isNewerThan1_19_R2 = Integer.parseInt(split[2].substring(1)) >= 2;
+            isNewerThan1_19_R3 = Integer.parseInt(split[2].substring(1)) >= 3;
             isNewerThan1_20 = false;
             isNewerThan1_19 = true;
         } else {
             isNewerThan1_19_R2 = false;
+            isNewerThan1_19_R3 = false;
             isNewerThan1_20 = false;
             isNewerThan1_19 = false;
         }
@@ -73,7 +77,15 @@ public class VersionManagerImpl implements VersionManager {
         // Check if the server is Folia
         try {
             Class.forName("io.papermc.paper.threadedregions.scheduler.AsyncScheduler");
-            this.isFolia = true;
+            this.hasRegionScheduler = true;
+        } catch (ClassNotFoundException ignored) {
+
+        }
+
+        // Check if the server is Mojmap
+        try {
+            Class.forName("net.minecraft.network.protocol.game.ClientboundBossEventPacket");
+            this.isMojmap = true;
         } catch (ClassNotFoundException ignored) {
 
         }
@@ -85,6 +97,11 @@ public class VersionManagerImpl implements VersionManager {
     @Override
     public boolean isVersionNewerThan1_19() {
         return isNewerThan1_19;
+    }
+
+    @Override
+    public boolean isVersionNewerThan1_19_R3() {
+        return isNewerThan1_19_R3;
     }
 
 
@@ -109,8 +126,13 @@ public class VersionManagerImpl implements VersionManager {
     }
 
     @Override
-    public boolean isFolia() {
-        return isFolia;
+    public boolean hasRegionScheduler() {
+        return hasRegionScheduler;
+    }
+
+    @Override
+    public boolean isMojmap() {
+        return isMojmap;
     }
 
     @Override

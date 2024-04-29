@@ -61,12 +61,12 @@ import java.util.concurrent.TimeUnit;
 public class ActionManagerImpl implements ActionManager {
 
     private final CustomFishingPlugin plugin;
-    private final HashMap<String, ActionFactory> actionBuilderMap;
+    private final HashMap<String, ActionFactory> actionFactoryMap;
     private final String EXPANSION_FOLDER = "expansions/action";
 
     public ActionManagerImpl(CustomFishingPlugin plugin) {
         this.plugin = plugin;
-        this.actionBuilderMap = new HashMap<>();
+        this.actionFactoryMap = new HashMap<>();
         this.registerInbuiltActions();
     }
 
@@ -110,7 +110,7 @@ public class ActionManagerImpl implements ActionManager {
 
     public void disable() {
         unload();
-        this.actionBuilderMap.clear();
+        this.actionFactoryMap.clear();
     }
 
     // Method to load global event actions from the plugin's configuration file.
@@ -129,8 +129,8 @@ public class ActionManagerImpl implements ActionManager {
      */
     @Override
     public boolean registerAction(String type, ActionFactory actionFactory) {
-        if (this.actionBuilderMap.containsKey(type)) return false;
-        this.actionBuilderMap.put(type, actionFactory);
+        if (this.actionFactoryMap.containsKey(type)) return false;
+        this.actionFactoryMap.put(type, actionFactory);
         return true;
     }
 
@@ -143,7 +143,7 @@ public class ActionManagerImpl implements ActionManager {
      */
     @Override
     public boolean unregisterAction(String type) {
-        return this.actionBuilderMap.remove(type) != null;
+        return this.actionFactoryMap.remove(type) != null;
     }
 
     /**
@@ -238,7 +238,7 @@ public class ActionManagerImpl implements ActionManager {
     @Nullable
     @Override
     public ActionFactory getActionFactory(String type) {
-        return actionBuilderMap.get(type);
+        return actionFactoryMap.get(type);
     }
 
     /**
@@ -490,9 +490,9 @@ public class ActionManagerImpl implements ActionManager {
             return condition -> {
                 if (Math.random() > chance) return;
                 if (CustomFishingPlugin.get().getVersionManager().isSpigot()) {
-                    condition.getPlayer().getLocation().getWorld().spawn(condition.getPlayer().getLocation(), ExperienceOrb.class, e -> e.setExperience((int) value.get(condition.getPlayer())));
+                    condition.getPlayer().getLocation().getWorld().spawn(condition.getPlayer().getLocation(), ExperienceOrb.class, e -> e.setExperience((int) value.get(condition.getPlayer(), condition.getArgs())));
                 } else {
-                    condition.getPlayer().giveExp((int) value.get(condition.getPlayer()), true);
+                    condition.getPlayer().giveExp((int) value.get(condition.getPlayer(), condition.getArgs()), true);
                     AdventureManagerImpl.getInstance().sendSound(condition.getPlayer(), Sound.Source.PLAYER, Key.key("minecraft:entity.experience_orb.pickup"), 1, 1);
                 }
             };
@@ -505,7 +505,7 @@ public class ActionManagerImpl implements ActionManager {
             return condition -> {
                 if (Math.random() > chance) return;
                 Player player = condition.getPlayer();
-                player.setFoodLevel((int) (player.getFoodLevel() + value.get(player)));
+                player.setFoodLevel((int) (player.getFoodLevel() + value.get(player, condition.getArgs())));
             };
         });
         registerAction("saturation", (args, chance) -> {
@@ -513,7 +513,7 @@ public class ActionManagerImpl implements ActionManager {
             return condition -> {
                 if (Math.random() > chance) return;
                 Player player = condition.getPlayer();
-                player.setSaturation((float) (player.getSaturation() + value.get(player)));
+                player.setSaturation((float) (player.getSaturation() + value.get(player, condition.getArgs())));
             };
         });
     }
@@ -523,7 +523,7 @@ public class ActionManagerImpl implements ActionManager {
             var value = ConfigUtils.getValue(args);
             return condition -> {
                 if (Math.random() > chance) return;
-                condition.getPlayer().giveExp((int) value.get(condition.getPlayer()));
+                condition.getPlayer().giveExp((int) value.get(condition.getPlayer(), condition.getArgs()));
                 AdventureManagerImpl.getInstance().sendSound(condition.getPlayer(), Sound.Source.PLAYER, Key.key("minecraft:entity.experience_orb.pickup"), 1, 1);
             };
         });
@@ -722,14 +722,14 @@ public class ActionManagerImpl implements ActionManager {
             var value = ConfigUtils.getValue(args);
             return condition -> {
                 if (Math.random() > chance) return;
-                VaultHook.getEconomy().depositPlayer(condition.getPlayer(), value.get(condition.getPlayer()));
+                VaultHook.getEconomy().depositPlayer(condition.getPlayer(), value.get(condition.getPlayer(), condition.getArgs()));
             };
         });
         registerAction("take-money", (args, chance) -> {
             var value = ConfigUtils.getValue(args);
             return condition -> {
                 if (Math.random() > chance) return;
-                VaultHook.getEconomy().withdrawPlayer(condition.getPlayer(), value.get(condition.getPlayer()));
+                VaultHook.getEconomy().withdrawPlayer(condition.getPlayer(), value.get(condition.getPlayer(), condition.getArgs()));
             };
         });
     }
@@ -930,7 +930,7 @@ public class ActionManagerImpl implements ActionManager {
             return condition -> {
                 if (Math.random() > chance) return;
                 Player player = condition.getPlayer();
-                player.setLevel((int) Math.max(0, player.getLevel() + value.get(condition.getPlayer())));
+                player.setLevel((int) Math.max(0, player.getLevel() + value.get(condition.getPlayer(), condition.getArgs())));
             };
         });
     }
@@ -1024,7 +1024,7 @@ public class ActionManagerImpl implements ActionManager {
                 return condition -> {
                     if (Math.random() > chance) return;
                     Optional.ofNullable(plugin.getIntegrationManager().getLevelPlugin(pluginName)).ifPresentOrElse(it -> {
-                        it.addXp(condition.getPlayer(), target, value.get(condition.getPlayer()));
+                        it.addXp(condition.getPlayer(), target, value.get(condition.getPlayer(), condition.getArgs()));
                     }, () -> LogUtils.warn("Plugin (" + pluginName + "'s) level is not compatible. Please double check if it's a problem caused by pronunciation."));
                 };
             } else {

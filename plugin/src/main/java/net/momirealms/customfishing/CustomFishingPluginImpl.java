@@ -17,8 +17,10 @@
 
 package net.momirealms.customfishing;
 
+import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
+import com.comphenix.protocol.events.PacketContainer;
 import de.tr7zw.changeme.nbtapi.utils.MinecraftVersion;
 import de.tr7zw.changeme.nbtapi.utils.VersionChecker;
 import net.momirealms.customfishing.adventure.AdventureManagerImpl;
@@ -29,7 +31,10 @@ import net.momirealms.customfishing.api.util.ReflectionUtils;
 import net.momirealms.customfishing.command.CommandManagerImpl;
 import net.momirealms.customfishing.compatibility.IntegrationManagerImpl;
 import net.momirealms.customfishing.compatibility.papi.PlaceholderManagerImpl;
-import net.momirealms.customfishing.libraries.libraryloader.LibraryLoader;
+import net.momirealms.customfishing.libraries.classpath.ReflectionClassPathAppender;
+import net.momirealms.customfishing.libraries.dependencies.Dependency;
+import net.momirealms.customfishing.libraries.dependencies.DependencyManager;
+import net.momirealms.customfishing.libraries.dependencies.DependencyManagerImpl;
 import net.momirealms.customfishing.mechanic.action.ActionManagerImpl;
 import net.momirealms.customfishing.mechanic.bag.BagManagerImpl;
 import net.momirealms.customfishing.mechanic.block.BlockManagerImpl;
@@ -55,18 +60,22 @@ import net.momirealms.customfishing.version.VersionManagerImpl;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.util.TimeZone;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class CustomFishingPluginImpl extends CustomFishingPlugin {
 
     private static ProtocolManager protocolManager;
     private CoolDownManager coolDownManager;
     private ChatCatcherManager chatCatcherManager;
+    private DependencyManager dependencyManager;
 
     public CustomFishingPluginImpl() {
         super();
@@ -74,7 +83,35 @@ public class CustomFishingPluginImpl extends CustomFishingPlugin {
 
     @Override
     public void onLoad() {
-        this.loadDependencies();
+        this.dependencyManager = new DependencyManagerImpl(this, new ReflectionClassPathAppender(this.getClassLoader()));
+        this.dependencyManager.loadDependencies(new ArrayList<>(
+                List.of(
+                        Dependency.GSON,
+                        Dependency.SLF4J_API,
+                        Dependency.SLF4J_SIMPLE,
+                        Dependency.COMMAND_API,
+                        Dependency.BOOSTED_YAML,
+                        Dependency.ADVENTURE_BUNDLE,
+                        Dependency.BIOME_API,
+                        Dependency.NBT_API,
+                        Dependency.EXP4J,
+                        Dependency.MYSQL_DRIVER,
+                        Dependency.MARIADB_DRIVER,
+                        Dependency.MONGODB_DRIVER_SYNC,
+                        Dependency.MONGODB_DRIVER_CORE,
+                        Dependency.MONGODB_DRIVER_BSON,
+                        Dependency.JEDIS,
+                        Dependency.COMMONS_POOL_2,
+                        Dependency.H2_DRIVER,
+                        Dependency.SQLITE_DRIVER,
+                        Dependency.BSTATS_BASE,
+                        Dependency.HIKARI,
+                        Dependency.BSTATS_BUKKIT,
+                        Dependency.INV_UI,
+                        Dependency.INV_UI_ACCESS,
+                        Dependency.INV_UI_NMS
+                )
+        ));
     }
 
     @Override
@@ -199,50 +236,6 @@ public class CustomFishingPluginImpl extends CustomFishingPlugin {
     }
 
     /**
-     * Load plugin dependencies
-     */
-    private void loadDependencies() {
-        String mavenRepo = TimeZone.getDefault().getID().startsWith("Asia") ?
-                "https://maven.aliyun.com/repository/public/" : "https://repo.maven.apache.org/maven2/";
-        LibraryLoader.loadDependencies(
-                "org.apache.commons:commons-pool2:2.12.0", mavenRepo,
-                "redis.clients:jedis:5.1.0", mavenRepo,
-                "dev.dejvokep:boosted-yaml:1.3.1", mavenRepo,
-                "com.zaxxer:HikariCP:5.0.1", mavenRepo,
-                "net.objecthunter:exp4j:0.4.8", mavenRepo,
-                "org.mariadb.jdbc:mariadb-java-client:3.3.0", mavenRepo,
-                "com.mysql:mysql-connector-j:8.2.0", mavenRepo,
-                "commons-io:commons-io:2.14.0", mavenRepo,
-                "com.google.code.gson:gson:2.10.1", mavenRepo,
-                "com.h2database:h2:2.2.224", mavenRepo,
-                "org.mongodb:mongodb-driver-sync:4.11.1", mavenRepo,
-                "org.mongodb:mongodb-driver-core:4.11.1", mavenRepo,
-                "org.mongodb:bson:4.11.1", mavenRepo,
-                "org.xerial:sqlite-jdbc:3.43.2.2", mavenRepo,
-                "dev.jorel:commandapi-bukkit-shade:9.3.0", mavenRepo
-        );
-
-        String version = getServer().getClass().getPackage().getName().split("\\.")[3];
-        String artifact = "";
-        switch (version) {
-            case "v1_17_R1" -> artifact = "r9";
-            case "v1_18_R1" -> artifact = "r10";
-            case "v1_18_R2" -> artifact = "r11";
-            case "v1_19_R1" -> artifact = "r12";
-            case "v1_19_R2" -> artifact = "r13";
-            case "v1_19_R3" -> artifact = "r15";
-            case "v1_20_R1" -> artifact = "r16";
-            case "v1_20_R2" -> artifact = "r17";
-            case "v1_20_R3" -> artifact = "r18";
-        }
-        LibraryLoader.loadDependencies(
-                "xyz.xenondevs.invui:invui-core:1.24", "https://repo.xenondevs.xyz/releases/",
-                "xyz.xenondevs.invui:inventory-access:1.24", "https://repo.xenondevs.xyz/releases/",
-                String.format("xyz.xenondevs.invui:inventory-access-%s:1.24", artifact), "https://repo.xenondevs.xyz/releases/"
-        );
-    }
-
-    /**
      * Disable NBT API logs
      */
     private void disableNBTAPILogs() {
@@ -331,6 +324,10 @@ public class CustomFishingPluginImpl extends CustomFishingPlugin {
         return chatCatcherManager;
     }
 
+    public DependencyManager getDependencyManager() {
+        return dependencyManager;
+    }
+
     /**
      * Retrieves the ProtocolManager instance used for managing packets.
      *
@@ -339,5 +336,16 @@ public class CustomFishingPluginImpl extends CustomFishingPlugin {
     @NotNull
     public static ProtocolManager getProtocolManager() {
         return protocolManager;
+    }
+
+    public static void sendPacket(Player player, PacketContainer packet) {
+        protocolManager.sendServerPacket(player, packet);
+    }
+
+    public static void sendPackets(Player player, PacketContainer... packets) {
+        List<PacketContainer> bundle = new ArrayList<>(Arrays.asList(packets));
+        PacketContainer bundlePacket = new PacketContainer(PacketType.Play.Server.BUNDLE);
+        bundlePacket.getPacketBundles().write(0, bundle);
+        sendPacket(player, bundlePacket);
     }
 }

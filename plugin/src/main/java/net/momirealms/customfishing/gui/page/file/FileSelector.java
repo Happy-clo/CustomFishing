@@ -19,7 +19,6 @@ package net.momirealms.customfishing.gui.page.file;
 
 import net.momirealms.customfishing.adventure.AdventureManagerImpl;
 import net.momirealms.customfishing.adventure.component.ShadedAdventureComponentWrapper;
-import net.momirealms.customfishing.gui.Icon;
 import net.momirealms.customfishing.gui.icon.BackGroundItem;
 import net.momirealms.customfishing.gui.icon.BackToFolderItem;
 import net.momirealms.customfishing.gui.icon.ScrollDownItem;
@@ -31,10 +30,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.jetbrains.annotations.NotNull;
-import xyz.xenondevs.invui.animation.impl.SequentialAnimation;
 import xyz.xenondevs.invui.gui.Gui;
 import xyz.xenondevs.invui.gui.ScrollGui;
-import xyz.xenondevs.invui.gui.SlotElement;
 import xyz.xenondevs.invui.gui.structure.Markers;
 import xyz.xenondevs.invui.item.Item;
 import xyz.xenondevs.invui.item.ItemProvider;
@@ -90,12 +87,12 @@ public class FileSelector {
                 .setGui(gui)
                 .build();
 
-        gui.playAnimation(new SequentialAnimation(1, true), slotElement -> {
-            if (slotElement instanceof SlotElement.ItemSlotElement itemSlotElement) {
-                return !(itemSlotElement.getItem() instanceof Icon);
-            }
-            return true;
-        });
+//        gui.playAnimation(new SequentialAnimation(1, true), slotElement -> {
+//            if (slotElement instanceof SlotElement.ItemSlotElement itemSlotElement) {
+//                return !(itemSlotElement.getItem() instanceof Icon);
+//            }
+//            return true;
+//        });
 
         window.open();
     }
